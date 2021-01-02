@@ -1,0 +1,146 @@
+---
+title: "QTM 150 Final Project"
+author: "Hyesun Jun"
+date: "12/06/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(ggthemes)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Questions: Does more expensive Airbnb mean more reviews and a more number of rentals(reviews) per month? Do the different neighborhood groups in NYC affect the distribution of the number of ratings depending on the price?
+
+
+
+### Why these questions?
+As a frequent airbnb user when I travel and a person who loves traveling, I thought it would be interesting to figure out the relationship between the price and the number of reviews depending on the neighborhood group in New York. I believe that this information would be beneficial for the future airbnb customers since this data shows the relationship between the price and the frequency of access to the certain properties relevant to different neighbor groups, which will guide them in their processing of choosing the location to stay at in New York City. I believe that this analysis would lead the customers to see the types of airbnbs most available in the different neighbourhood groups in NYC. I was also curious of how the location can change the number of rentals(reviews) per month and what would affect this. I predicted that Brooklyn and Manhattan would have more number of reviews than others because the tourist attractions are mainly focused in those locations in NYC. 
+
+##Section 1:Raw Data - Airbnb: Price vs. Number of reviews
+This dataset includes the listing activity and the metrics in NYC that are useful to discover more about the customers, and hosts.For the first section, I investigated the different variables in the dataset. Then, I created a scatterplot to visualize the relationship between the price and the number of reviews, then realized that a histogram would be a better option for a better visualization of the data. Then, I repeated that process for the different neighbourhood groups in NYC. There are 5 neighbourhood groups(Bronx,Brookly,Manhattan,Queens,Staten Island) so I decided that this variable and using the facet function would provide a compact and clear representation of how the location in NYC affects the number of ratings depending on the price. 
+
+
+### Data Frame
+The dataset was provided by Airbnb and the data frame includes the following: id,name,host_id,host_name,neighbourhood_group,neighbourhood,latitude,longitude,room_type,price,minimum_nights,number_of_reviews,last_review,reviews_per_month,calculated_host_listings_count,availability_365. (Descriptions availabel in codebook)
+
+I got this data from Kaggle originally provided by Airbnb. The url is down below. 
+(https://www.kaggle.com/dgomonov/new-york-city-airbnb-open-data)
+```{r}
+AB_NYC_2019 <- read.csv("AB_NYC_2019.csv")
+
+```
+
+### Data Visualization
+I created a scatterplot of the price vs. number of reviews where one dot represents one review (one rental of airbnb). However, since this graph doesn't accurately convey the relationship between the price vs. number of reviews, I created a histogram. 
+```{r}
+AB_NYC_2019%>%
+  group_by(price,number_of_reviews)%>%
+  filter(number_of_reviews>=100) %>%
+  ggplot(aes(x=price,y=number_of_reviews))+
+  geom_point(size=4, aes(color=number_of_reviews))+
+  scale_color_gradient(name="number of reviews", low="yellow", high ="#32cd32")+
+  labs(x="price", y="number of reviews", title= "Price vs. Number of reviews")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+#### Part 1: Data Frame creation
+
+*New price dataset where the price is less than 200, more than 100 reviews*
+I created a newprice dataset with the price less than 200 because referring to the scatterplot above, the properties available are mostly concentrated between the price of 0 and 200. Also, the median and the mean lies in the range of 0 to 200. Moreover, as an Airbnb customer I'm interested in the price range of 0 to 200.
+
+I chose the number of reviews to be more than 100 because in the customer's view more than 100 reviews means the house is more reliable to stay at. 
+```{r}
+#new price subset
+newprice<-AB_NYC_2019 %>%
+  filter(price <= 200)
+
+table(AB_NYC_2019$price)
+summary(AB_NYC_2019$price) #median: 106.0, Mean:152.7
+
+
+#Table with number more than 100 reviews
+AB_NYC_2019%>%
+  group_by(price,number_of_reviews)%>%
+  filter(number_of_reviews>=100)
+```
+
+*Converting the price into different levels.*
+This is the step where the x-axis labels of the histogram is determined to visualize the relationship between the price and the number of reviews more effectively. I categorized the price into four different levels(Cheap,Mediocre,Affordable,Expensive) with a gap of 50.
+```{r}
+
+price1<-levels(newprice$price)
+price1<-factor(price1,as.character(price1))
+summary(newprice$price)
+summary(newprice$neighbourhood_group)
+table(newprice$neighbourhood_group)
+
+newprice$price1[newprice$price==range(0,50, na.rm=FALSE)]<-"Cheap"
+newprice$price1[newprice$price==range(51,100,na.rm=FALSE)]<-"Mediocre"
+newprice$price1[newprice$price==range(101,150,na.rm=FALSE)]<-"Affordable"
+newprice$price1[newprice$price==range(151,200,na.rm=FALSE)]<-"Expensive"
+
+summary(newprice$price1)
+```
+
+#### Data Visualization
+
+*price levels vs. number of reviews*
+I created a facet with histograms showing the relationship between the price levels and the number of reviews in the 5 different neighborhood groups in NYC. My inital attempt was to create a bar graph but since there was a bar for each of the stays, the graph was hard to detect the trend. Therefore, I visualized it in histograms. 
+```{r}
+newprice1<-na.omit(newprice) #get rid of NA's
+newprice1%>%
+  group_by(price1,number_of_reviews,neighbourhood_group)%>%
+  filter(number_of_reviews>=100)%>%
+  ggplot(aes(x=price1,y=number_of_reviews))+
+  geom_histogram(stat="identity")+
+  facet_wrap(~neighbourhood_group)+
+  labs(x="price",y="number of reviews", title="Price Levels vs. Number of reviews")
+
+#Initial attempt of bar graph
+ggplot(newprice,aes(price))+
+  geom_bar(aes(fill=number_of_reviews))+
+  facet_wrap(~neighbourhood_group)
+
+
+```
+
+*price levels vs. number of reviews per month*
+
+I created a facet with histograms showing the relationship between the price levels and the number of reviews per month in the 5 different neighborhood groups in NYC to see if there's a difference from the graph above. The overall trend where the number and frequency of the reviews are concentrated in Brooklyn and Manhatten are similar to the graph above. 
+```{r}
+table(newprice1$reviews_per_month)
+
+newprice1%>%
+  group_by(price1,reviews_per_month)
+
+newprice1%>%
+  group_by(price1,reviews_per_month,neighbourhood_group)%>%
+  ggplot(aes(x=price1,y=reviews_per_month))+
+  geom_histogram(stat="identity")+
+  facet_wrap(~neighbourhood_group)+
+  labs(x="price",y="number of reviews per month", title="Price Levels vs. Number of reviews per month")
+```
+
+#### Conclusion
+
+Queens, Bronx, Staten Island shows the trend where there are the most number of reviews per month as well as number of reviews in "Cheap" price level. Interestingly, Brooklyn and Manhattan had a different trend where there were most reviews in the "Mediocre" price level. "Cheap" price level was the 3rd most in Brooklyn and surprisingly "Cheap" price level was ranked to be last in Manhattan. I think this is because Manhattan and Brooklyn are both downtown and they have all the main tourist attractions. The wealthier customers would prefer to stay in downtown where it's close to the tourist attractions(Times Square, Empire State building, Central park, Dumbo etc.) rather than Queens, Staten Island, or Bronx. Therefore, there would be more reviews in the higher price range. 
+
+I conclude that the "Mediocre" price level($51-100) was most popular in the two neighborhood groups: Brooklyn and Manhattan. Going against to my prediction where lower the price, more the reviews (rentals), it was an exception in these two neighborhood groups. 
+
+The 3 other neighborhood groups(Queens, Bronx, Staten Island) have the trend where the "Cheap" price level have the most number of reviews and the number of reviews per month. I assume that the reason behind this is because there are more cheaper properties that are cheaper than that in downtown possibly because the house renting fees in these neighborhoods are comparatively cheaper as well. 
+
+The wealthier customers would approach the airbnbs in Manhattan and Brooklyn whereas the poorer customers like students would approach the airbnbs in Queens, Bronx, or Staten Island where it's cheap even though they are a bit distant from the main tourist attractions. 
+
+I found this dataset very interesting and usefulto analyze because it shows the trend that depending on the customer's desired price range, he/she can identify which neighborhood of NYC has the most number of properties or vice versa. This leads to a quicker and more effective decision making process for the customers.
+
+In addition, I thought it would be useful if the dataset had the option of age instead of the id number of the customer because it would be interesting to see the number of reviews(stays) in what neighborhood depending on the age. I predict that the younger age group would have a higher number of stays in Queens, Bronx and Staten Island than downtown NYC. A potential future research question could be "What's the relationship between the age and the number of reviews depending on the different neighborhood groups in NYC? Would more of the students stay at Queens, Bronx, and State Island?" 
+
